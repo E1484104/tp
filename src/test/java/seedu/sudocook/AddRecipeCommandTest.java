@@ -1,10 +1,10 @@
 package seedu.sudocook;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 
 public class AddRecipeCommandTest {
@@ -13,7 +13,7 @@ public class AddRecipeCommandTest {
 
 
     @Test
-    public void addCommandTest(){
+    public void addCommandTest() {
         ArrayList<String> ingredients = new ArrayList<>();
         ingredients.add("Water");
         ingredients.add("Noodles");
@@ -30,7 +30,7 @@ public class AddRecipeCommandTest {
     }
 
     @Test
-    public void formatErrorTest(){
+    public void formatErrorTest() {
         String testCmd = "add-r Gibberish Gibberish";
         Ui ui = new Ui();
         Parser parser = new Parser(ui);
@@ -42,8 +42,9 @@ public class AddRecipeCommandTest {
     }
 
     @Test
-    public void parserTest(){
-        String testCmd = "add-r {Fried Rice} i/rice 2 cups egg 2 pcs soy_sauce 1 tbsp s/{Cook the rice.} {Scramble the eggs.} {Mix everything together.}";
+    public void parserTest() {
+        String testCmd = "add-r {Fried Rice} i/rice 2 cups egg " +
+                "2 pcs soy_sauce 1 tbsp s/{Cook the rice.} {Scramble the eggs.} {Mix everything together.}";
         Ui ui = new Ui();
         Parser parser = new Parser(ui);
         Command cmd;
