@@ -44,7 +44,7 @@ public class SudoCook {
         for (Handler h : rootLogger.getHandlers()) {
             rootLogger.removeHandler(h);
         }
-        rootLogger.addHandler(new StreamHandler(System.out, new SimpleFormatter()) {
+        rootLogger.addHandler(new StreamHandler(System.err, new SimpleFormatter()) {
             @Override
             public synchronized void publish(LogRecord record) {
                 super.publish(record);
