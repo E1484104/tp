@@ -20,6 +20,11 @@ public class RecipeBook {
     }
 
     public void removeRecipe(int index) {
+        if (index < 1 || index > recipes.size()) {
+            throw new IndexOutOfBoundsException(
+                    "Index " + index + " is out of range. Valid range: 1 to " + recipes.size()
+            );
+        }
         recipes.remove(index - 1);
     }
 
