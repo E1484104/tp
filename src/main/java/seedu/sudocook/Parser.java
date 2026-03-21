@@ -7,6 +7,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 public class Parser {
     private static Logger logger = Logger.getLogger("Parser");
     private final Ui ui;
@@ -32,6 +33,10 @@ public class Parser {
         } else if (input.startsWith("list-r")) {
             logger.log(Level.INFO, "Received list-r request");
             c = new ListRecipeCommand();
+        } else if (input.startsWith("recommend-r")) {
+            int targetIndex = input.indexOf("n/");
+            String ingredientName = input.substring(targetIndex + "n/".length()).trim();
+            c = new RecommendRecipeCommand(ingredientName);
         } else if (input.startsWith("list-i")) {
             c = new ListIngredientCommand();
         } else if (input.startsWith("delete-i")) {
@@ -167,11 +172,11 @@ public class Parser {
         } else if (input.startsWith("filter-r")) {
             logger.log(Level.INFO, "Received filter-r request");
             String filterInput = input.substring("filter-r".length()).trim();
-            
+
             Integer maxTime = null;
             Pattern filterPattern = Pattern.compile("t/(\\d+)");
             Matcher filterMatcher = filterPattern.matcher(filterInput);
-            
+
             if (filterMatcher.find()) {
                 try {
                     maxTime = Integer.parseInt(filterMatcher.group(1));
@@ -180,15 +185,15 @@ public class Parser {
                     return new Command(false);
                 }
             }
-            
+
             if (maxTime == null) {
                 Ui.printError("No valid filter targets provided. Use: filter-r t/MAX_TIME");
                 return new Command(false);
             }
-            
+
             c = new FilterRecipeCommand(maxTime);
 
-        } else if (input.startsWith("cook")){
+        } else if (input.startsWith("cook")) {
             logger.log(Level.INFO, "Received cook-r request");
             String[] words = input.split(" ");
             int index = 0;
