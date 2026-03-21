@@ -52,19 +52,22 @@ public class SudoCook {
             } else if (cmd instanceof HelpCommand) {
                 logger.log(Level.FINE, "Routing help command");
                 cmd.execute(inventory); // Execute on either, it just prints UI
-            } else if (cmd instanceof CookCommand){
+            } else if (cmd instanceof CookCommand) {
                 logger.log(Level.FINE, "Routing cook command");
 
                 cmd.execute(recipes.getRecipe(cmd.getIndex()), inventory);
 
-            } else{
+            } else if (cmd instanceof RecommendRecipeCommand) {
+                logger.log(Level.FINE, "Routing recommend command");
+                cmd.execute(inventory, recipes);
+            } else {
                 logger.log(Level.FINE, "Routing command to RecipeBook");
                 cmd.execute(recipes);
             }
             input = ui.readInput();
         }
         logger.log(Level.INFO, "SudoCook application shutting down");
-        ui.printBye();
+        Ui.printBye();
     }
 
     public static void main(String[] args) {
