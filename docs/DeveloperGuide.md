@@ -103,6 +103,109 @@ Key snippet from `RecommendRecipeCommand`:
 
 *Decision:* Linear scan is sufficient for the expected data sizes. An index can be introduced if performance becomes a concern.
 
+### `cook` - Cook a Recipe
+
+#### Overview
+
+The `cook` command prepares a recipe by consuming the required ingredients from the user's
+inventory. It first checks that the requested recipe exists and that every required ingredient is
+available in sufficient quantity before any inventory updates are made.
+
+**Command format:** `cook INDEX`
+
+  ---
+
+#### Implementation
+
+The feature involves four main classes:
+
+| Class | Role |
+|---|---|
+| `Parser` | Parses raw input, validates the recipe index, and constructs a `CookCommand` |
+| `CookCommand` | Validates ingredient availability and performs the cooking logic |
+| `RecipeBook` | Provides access to the recipe selected by the user |
+| `Inventory` | Stores ingredient quantities and is updated after a successful cook |
+
+**Step-by-step execution:**
+
+1. The user enters `cook <index>`.
+2. `Parser.parse()` detects the `cook` prefix, parses the recipe index, converts it from 1-based to
+   0-based form, and constructs a `CookCommand`.
+3. If the index is not a valid number, an error is printed and a no-op `Command` is returned.
+4. `SudoCook` detects the command type, retrieves the target recipe using
+   `recipes.getRecipe(cmd.getIndex())`, and calls `cmd.execute(recipe, inventory)`.
+5. Inside `execute()`:
+    - If the recipe is `null`, execution stops immediately. This happens when the requested index is
+      out of bounds.
+    - The recipe's ingredient list is checked first to ensure every required ingredient exists in
+      the inventory and has enough quantity.
+    - If any ingredient is missing or insufficient, `Ui.printError()` is called and the inventory
+      remains unchanged.
+    - If all checks pass, the required quantities are removed from the inventory and a success
+      message is printed.
+
+Key snippet from `CookCommand`:
+
+```text
+  for (Ingredient i : recipe.getIngredients()) {
+      int ingredientIndex = inventory.findIndexByName(i.getName());
+      if (ingredientIndex < 0
+              || inventory.getIngredient(ingredientIndex).getQuantity() < i.getQuantity()) {
+          throw new RuntimeException("Not enough ingredients");
+      }
+  }
+
+  for (Ingredient i : recipe.getIngredients()) {
+      Command c = new DeleteIngredientCommand(i.getName(), i.getQuantity());
+      c.execute(inventory);
+  }
+```
+
+  ---
+
+#### Sequence Diagram
+
+![Cook Sequence Diagram](team/cook.png)
+
+*Figure 2: Sequence Diagram for the `cook` command*
+
+  ---
+
+#### Design Considerations
+
+**Aspect: Indexing of recipes**
+
+| Option | Pros | Cons |
+|---|---|---|
+| 1-based user input, converted internally (current) | Matches how recipes are shown in lists; more natural for users | Requires conversion before lookup |
+| 0-based user input | Aligns directly with internal storage | Less intuitive for end users |
+
+*Decision:* 1-based indexing was chosen for the user-facing command because recipe lists are also
+displayed starting from 1.
+
+  ---
+
+**Aspect: Inventory update strategy**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Validate all ingredients before removal (current) | Prevents partial updates; preserves consistency on failure | Requires two passes over the ingredient list |
+| Remove ingredients as they are checked | Slightly simpler flow | Can leave inventory partially updated if a later ingredient is missing |
+
+*Decision:* Validation is performed before removal so `cook` behaves as an all-or-nothing operation.
+
+  ---
+
+**Aspect: Reusing deletion logic**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Reuse `DeleteIngredientCommand` for quantity removal (current) | Avoids duplicating inventory update logic | Adds an extra command object per ingredient |
+| Update `Inventory` directly inside `CookCommand` | Fewer intermediate objects | Duplicates removal behavior and message handling |
+
+*Decision:* Reusing `DeleteIngredientCommand` keeps ingredient-removal behavior centralized even
+though it adds a small amount of indirection.
+
 
 ## Product scope
 ### Target user profile
