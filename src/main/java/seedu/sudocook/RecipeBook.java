@@ -44,12 +44,35 @@ public class RecipeBook {
         }
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < recipes.size(); i++) {
+            sb.append(i + 1).append(". ").append(recipes.get(i).getName());
+            if (i < recipes.size() - 1) {
+                sb.append("\n");
+            }
+        }
+        Ui.printGradientMessage(sb.toString());
+    }
+
+    public void viewRecipe() {
+        if (recipes.isEmpty()) {
+            Ui.printMessage("No recipes found.");
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < recipes.size(); i++) {
             sb.append(i + 1).append(". ").append(recipes.get(i).toString().stripLeading());
             if (i < recipes.size() - 1) {
                 sb.append("\n");
             }
         }
         Ui.printGradientMessage(sb.toString());
+    }
+
+    public void viewRecipe(int index) {
+        if (index < 1 || index > recipes.size()) {
+            Ui.printError("Index " + index + " is out of range. Valid range: 1 to " + recipes.size());
+            return;
+        }
+        Ui.printGradientMessage(recipes.get(index - 1).toString().stripLeading());
     }
 
     public void addRecipe(String name, ArrayList<Ingredient> ingredients, ArrayList<String> steps, int time){
