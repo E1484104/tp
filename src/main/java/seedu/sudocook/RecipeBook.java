@@ -7,15 +7,6 @@ public class RecipeBook {
 
     public RecipeBook() {
         this.recipes = new ArrayList<>();
-        /*Test Purpose*/
-        ArrayList<Ingredient> testIngs = new ArrayList<>();
-        ArrayList<String> testSteps = new ArrayList<>();
-        testIngs.add(new Ingredient("Water", 1, "Liter"));
-        testIngs.add(new Ingredient("Sugar", 1, "mg"));
-        testSteps.add("Pour MIXUE into pot");
-        testSteps.add("Heat the pot");
-        testSteps.add("Drink with your extraordinary courage");
-        recipes.add(new Recipe("Mixue", testIngs, testSteps, 5));
     }
 
     public void removeRecipe(int index) {
