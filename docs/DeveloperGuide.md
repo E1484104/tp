@@ -103,6 +103,57 @@ Key snippet from `RecommendRecipeCommand`:
 
 *Decision:* Linear scan is sufficient for the expected data sizes. An index can be introduced if performance becomes a concern.
 
+### `list-r` and `view-r` — Recipe Listing and Viewing
+
+#### Overview
+
+Two commands are provided for browsing recipes:
+
+- `list-r` prints a compact numbered list of recipe names only, giving the user a quick overview.
+- `view-r` prints full recipe details (ingredients and steps). It can be used with or without an index.
+
+**Command formats:**
+- `list-r` — lists all recipe names
+- `view-r` — shows full details for all recipes
+- `view-r INDEX` — shows full details for the recipe at the given 1-based index
+
+---
+
+#### Implementation
+
+Both commands delegate to `RecipeBook` via `ListRecipeCommand` and `ViewRecipeCommand` respectively.
+
+| Class | Role |
+|---|---|
+| `Parser` | Detects `list-r` or `view-r` prefix and constructs the appropriate command |
+| `ListRecipeCommand` | Calls `RecipeBook.listRecipe()` |
+| `ViewRecipeCommand` | Calls `RecipeBook.viewRecipe()` or `RecipeBook.viewRecipe(index)` |
+| `RecipeBook` | Builds and prints the output string |
+
+**`list-r` execution:**
+
+1. `RecipeBook.listRecipe()` iterates over all recipes and appends only the name of each to a `StringBuilder`.
+2. The result is printed via `Ui.printGradientMessage()`.
+
+**`view-r` execution:**
+
+1. If no index is given, `RecipeBook.viewRecipe()` iterates over all recipes and appends the full `toString()` of each (with a numbered prefix) to a `StringBuilder`.
+2. If an index is given, `RecipeBook.viewRecipe(int index)` validates the index and prints the single recipe's `toString()` directly.
+3. Invalid indices print an error via `Ui.printError()`.
+
+#### Design Considerations
+
+**Aspect: Separating list and view into two commands**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Separate `list-r` (names) and `view-r` (details) (current) | Quick overview with `list-r`; full details on demand with `view-r` | Two commands to remember |
+| Single command always showing full details | Fewer commands | Clutters output when the user only wants a name reminder |
+
+*Decision:* Splitting the commands keeps everyday browsing fast while still allowing full detail inspection when needed.
+
+---
+
 ### `cook` - Cook a Recipe
 
 #### Overview
