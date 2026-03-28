@@ -1,6 +1,7 @@
 package seedu.sudocook;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 
 /**
  * Manages the inventory of ingredients.
@@ -36,6 +37,14 @@ public class Inventory {
      * @return ArrayList of ingredients
      */
     public ArrayList<Ingredient> getIngredients() {
+        return new ArrayList<>(ingredients);
+    }
+
+    public ArrayList<Ingredient> sortIngredients() {
+        ingredients.sort(Comparator.comparing(
+                Ingredient::getExpiryDate,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
         return new ArrayList<>(ingredients);
     }
 
