@@ -84,9 +84,9 @@ Key snippet from `RecommendByIngredientCommand`:
       case-insensitive name match.
     - If the ingredient is absent or the available quantity is less than required, `canMake`
       returns `false` and the recipe is excluded.
-    - If all ingredients pass, `canMake` returns `true` and the recipe is appended to the result.
-5. If no recipe is makeable, a "No recipes can be made" message is printed; otherwise the list of
-   makeable recipe names is printed.
+    - If all ingredients pass, `canMake` returns `true` and the recipe is appended to the result. 
+    - If no recipe is makeable, a "No recipes can be made" message is printed; otherwise the list of 
+      makeable recipe names is printed.
 
 Key snippet from `RecommendByInventoryCommand`:
 
@@ -117,6 +117,7 @@ Key snippet from `RecommendByInventoryCommand`:
 
 *Figure 1: Sequence Diagram for `recommend-r n/INGREDIENT_NAME` (ingredient-based mode)*
 
+<br>
 <br>
 
 ![Recommend By Inventory Sequence Diagram](team/RecommendByInventorySD.png)
