@@ -16,7 +16,7 @@ public class HelpCommand extends Command {
 
     @Override
     public void execute(Inventory inventory) {
-        String helpMessage = 
+        String helpMessage =
             "SudoCook Help Guide\n" +
             "========================================================\n\n" +
             "RECIPE COMMANDS:\n" +
@@ -39,9 +39,10 @@ public class HelpCommand extends Command {
             "   Command : filter-r t/{MAX_TIME_IN_MINUTES}\n" +
             "   Example : filter-r t/30\n\n" +
             "6. Recommend Recipes\n" +
-            "   Command : recommend-r n/{INGREDIENT_NAME}\n" +
-            "   Example : recommend-r n/egg\n"+
-            "   Purpose : Shows recipes using specific ingredient with sufficient stock.\n\n" +
+            "   Command : recommend-r [n/{INGREDIENT_NAME}]\n" +
+            "   Example : recommend-r n/egg\n" +
+            "   Example : recommend-r\n" +
+            "   Purpose : Recommend available recipes based on specific ingredient or current inventory.\n\n" +
             "INGREDIENT COMMANDS:\n" +
             "--------------------------------------------------------\n" +
             "7. List Ingredients\n" +
@@ -60,7 +61,7 @@ public class HelpCommand extends Command {
             "   Command : bye\n" +
             "   Purpose : Exits SudoCook.\n\n" +
             "========================================================";
-            
+
         Ui.printMessage(helpMessage);
     }
 }

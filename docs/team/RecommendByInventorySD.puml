@@ -1,0 +1,69 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+hide footbox
+
+skinparam MaxMessageSize 150
+
+actor User
+participant ":SudoCook" as SudoCook
+participant ":Parser" as Parser
+participant "cmd:RecommendByInventoryCommand" as Cmd
+participant "inventory:Inventory" as Inventory
+participant "recipes:RecipeBook" as RecipeBook
+participant "recipe:Recipe" as Recipe
+participant ":Ui" as Ui
+
+User -> SudoCook : run()
+activate SudoCook
+
+SudoCook -> Parser : parse("recommend-r")
+activate Parser
+
+create Cmd
+Parser -> Cmd ** : RecommendByInventoryCommand()
+activate Cmd
+Cmd --> Parser
+deactivate Cmd
+
+Parser --> SudoCook : cmd
+deactivate Parser
+
+SudoCook -> Cmd : execute(inventory, recipes)
+activate Cmd
+
+loop for each recipe in recipes
+    Cmd -> RecipeBook : getRecipe(i)
+    activate RecipeBook
+    RecipeBook --> Cmd : recipe
+    deactivate RecipeBook
+
+    Cmd -> Recipe : getIngredients()
+    activate Recipe
+    Recipe --> Cmd : requiredIngredients
+    deactivate Recipe
+
+    loop for each required ingredient in recipe
+        Cmd -> Inventory : getIngredient(j)
+        activate Inventory
+        Inventory --> Cmd : item
+        deactivate Inventory
+        note right of Cmd : Case-insensitive name match;\nif available < required, recipe\nis excluded immediately
+    end
+    note right of Cmd : If all ingredients pass,\nappend recipe to result list
+end
+
+Cmd -> Ui : printMessage(resultString)
+activate Ui
+Ui --> Cmd
+deactivate Ui
+
+SudoCook <-- Cmd
+deactivate Cmd
+destroy Cmd
+
+SudoCook --> User
+deactivate SudoCook
+
+@enduml
