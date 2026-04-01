@@ -6,61 +6,45 @@
 
 ## Design & implementation
 
-### `recommend-r` — Recipe Recommendation
+### `recommend-r` — Ingredient-based Recipe Recommendation
 
 #### Overview
 
-The `recommend-r` command supports three modes of recipe recommendation:
+The `recommend-r` command recommends recipes that the user can make given a specific ingredient                                                                       
+currently in their inventory. It checks that the ingredient exists in the inventory and that the
+recipe's required quantity does not exceed what is available.
 
-- **Ingredient-based mode** (`recommend-r n/INGREDIENT_NAME`): recommends recipes that use a specific
-  ingredient, provided the inventory holds enough of it.
-- **Inventory-based mode** (`recommend-r`): recommends every recipe whose **full** ingredient list
-  can be satisfied by the current inventory — i.e. every required ingredient is present and in
-  sufficient quantity.
-- **Missing-based mode** (`recommend-r missing/N`): recommends recipes that are missing **at most N**
-  ingredients (or insufficient quantities), and shows the exact shortfall for each missing ingredient
-  so the user knows what to buy.
-
-**Command formats:**
-
-| Mode | Format | Example |
-|---|---|---|
-| Ingredient-based | `recommend-r n/INGREDIENT_NAME` | `recommend-r n/egg` |
-| Inventory-based | `recommend-r` | `recommend-r` |
-| Missing-based | `recommend-r missing/N` | `recommend-r missing/2` |
+**Command format:** `recommend-r n/INGREDIENT_NAME`
 
   ---
 
 #### Implementation
 
-The feature involves six classes:
+The feature involves four classes:
 
 | Class | Role |
 |---|---|
-| `Parser` | Parses raw input, selects the correct command variant, and validates format |
-| `RecommendByIngredientCommand` | Executes ingredient-based recommendation logic |
-| `RecommendByInventoryCommand` | Executes inventory-based recommendation logic |
-| `RecommendByMissingCommand` | Executes missing-based recommendation logic |
+| `Parser` | Parses raw input, validates format, and constructs a `RecommendRecipeCommand` |
+| `RecommendRecipeCommand` | Executes the recommendation logic |
 | `Inventory` | Provides access to current ingredient stocks |
 | `RecipeBook` | Provides access to all known recipes |
 
-**Ingredient-based mode — step-by-step execution:**
+**Step-by-step execution:**
 
 1. The user enters `recommend-r n/<ingredient>`.
-2. `Parser.parse()` detects the `n/` prefix, extracts the ingredient name, and constructs a
-   `RecommendByIngredientCommand`. If the format is invalid or the name is empty, an error is printed and
-   a no-op `Command` is returned.
-3. `SudoCook` calls `cmd.execute(inventory, recipes)`.
-4. Inside `execute()`:
-    - The inventory is searched linearly for a case-insensitive name match. The available quantity
-      is recorded.
+2. `Parser.parse()` verifies the `n/` prefix and extracts the ingredient name. If the format is
+   invalid or the name is empty, an error is printed and a no-op `Command` is returned.
+3. A `RecommendRecipeCommand` is constructed with the ingredient name.
+4. `SudoCook` detects the command type and calls `cmd.execute(inventory, recipes)`.
+5. Inside `execute()`:
+    - The inventory is searched linearly for a case-insensitive match. The available quantity is recorded.
     - If the ingredient is not found, `Ui.printError()` is called and execution stops.
     - Otherwise, each recipe in `RecipeBook` is inspected. A recipe qualifies if it contains the
       ingredient **and** requires a quantity ≤ the available amount.
     - If no recipe qualifies, a "No recipes meet the requirement" message is printed; otherwise the
       list of matching recipe names is printed.
 
-Key snippet from `RecommendByIngredientCommand`:
+Key snippet from `RecommendRecipeCommand`:
 
 ```text
   for (int i = 0; i < recipes.size(); i++) {
@@ -78,116 +62,15 @@ Key snippet from `RecommendByIngredientCommand`:
 
   ---
 
-**Inventory-based mode — step-by-step execution:**
+#### Sequence Diagram
 
-1. The user enters `recommend-r` (no arguments).
-2. `Parser.parse()` detects the absence of arguments and constructs a
-   `RecommendByInventoryCommand`.
-3. `SudoCook` calls `cmd.execute(inventory, recipes)`.
-4. Inside `execute()`, each recipe is evaluated by `canMake(recipe, inventory)`:
-    - For every ingredient required by the recipe, the inventory is searched for a
-      case-insensitive name match.
-    - If the ingredient is absent or the available quantity is less than required, `canMake`
-      returns `false` and the recipe is excluded.
-    - If all ingredients pass, `canMake` returns `true` and the recipe is appended to the result. 
-    - If no recipe is makeable, a "No recipes can be made" message is printed; otherwise the list of 
-      makeable recipe names is printed.
+![Recommend Recipe Sequence Diagram](team/RecommendSD-0.png)
 
-Key snippet from `RecommendByInventoryCommand`:
-
-```text
-  private boolean canMake(Recipe recipe, Inventory inventory) {
-      for (Ingredient required : recipe.getIngredients()) {
-          double available = -1;
-          for (int j = 0; j < inventory.size(); j++) {
-              Ingredient item = inventory.getIngredient(j);
-              if (item.getName().equalsIgnoreCase(required.getName())) {
-                  available = item.getQuantity();
-                  break;
-              }
-          }
-          if (available < required.getQuantity()) {
-              return false;
-          }
-      }
-      return true;
-  }
-```
-
-  ---
-
-**Missing-based mode — step-by-step execution:**
-
-1. The user enters `recommend-r missing/<N>`.
-2. `Parser.parse()` detects the `missing/` prefix, extracts and validates `N` as a positive integer,
-   and constructs a `RecommendByMissingCommand(N)`. If `N` is not a positive integer, an error is
-   printed and a no-op `Command` is returned.
-3. `SudoCook` calls `cmd.execute(inventory, recipes)`.
-4. Inside `execute()`, each recipe is evaluated by `getMissingIngredients(recipe, inventory)`:
-    - For every ingredient required by the recipe, the inventory is searched for a case-insensitive
-      name match.
-    - If the ingredient is absent or the available quantity is less than required, the shortfall
-      (`required quantity − available quantity`) and unit are recorded.
-    - The method returns the list of formatted shortfall strings (e.g. `"Salt (1.0 g)"`).
-5. Back in `execute()`, the recipe is included in the output only if the number of missing items is
-   **between 1 and N** (inclusive). Recipes with zero missing items — i.e. fully makeable ones —
-   are always excluded.
-6. If no recipe qualifies, a "No recipes found" message is printed; otherwise the numbered list
-   with per-recipe shortfall details is printed.
-
-Key snippet from `RecommendByMissingCommand`:
-
-```text
-  private ArrayList<String> getMissingIngredients(Recipe recipe, Inventory inventory) {
-      ArrayList<String> missing = new ArrayList<>();
-      for (Ingredient required : recipe.getIngredients()) {
-          double available = 0;
-          for (int j = 0; j < inventory.size(); j++) {
-              Ingredient item = inventory.getIngredient(j);
-              if (item.getName().equalsIgnoreCase(required.getName())) {
-                  available = item.getQuantity();
-                  break;
-              }
-          }
-          if (available < required.getQuantity()) {
-              double shortfall = required.getQuantity() - available;
-              missing.add(required.getName() + " (" + shortfall + " " + required.getUnit() + ")");
-          }
-      }
-      return missing;
-  }
-```
-
-  ---
-
-#### Sequence Diagrams
-
-![Recommend Recipe Sequence Diagram](team/RecommendSD.png)
-
-*Figure 1: Sequence Diagram for `recommend-r n/INGREDIENT_NAME` (ingredient-based mode)*
-
-<br>
-<br>
-
-![Recommend By Inventory Sequence Diagram](team/RecommendByInventorySD.png)
-
-*Figure 2: Sequence Diagram for `recommend-r` (inventory-based mode)*
+*Figure 1: Sequence Diagram for the `recommend-r` command*
 
   ---
 
 #### Design Considerations
-
-**Aspect: Two modes under one command vs. separate commands**
-
-| Option | Pros | Cons |
-|---|---|---|
-| Single `recommend-r` command with optional `n/` argument (current) | Consistent command prefix; easier to discover both modes via `help` | Slightly more complex parsing logic |
-| Separate commands (e.g. `recommend-r` and `recommend-all`) | Fully independent; no shared parsing | More commands for the user to remember |
-
-*Decision:* Keeping both modes under `recommend-r` provides a natural extension of the existing
-command and keeps the help output concise.
-
-  ---
 
 **Aspect: Case sensitivity of ingredient matching**
 
@@ -268,71 +151,6 @@ Both commands delegate to `RecipeBook` via `ListRecipeCommand` and `ViewRecipeCo
 | Single command always showing full details | Fewer commands | Clutters output when the user only wants a name reminder |
 
 *Decision:* Splitting the commands keeps everyday browsing fast while still allowing full detail inspection when needed.
-
----
-
-### `delete-r` — Delete a Recipe
-
-#### Overview
-
-The `delete-r` command permanently removes a recipe from the recipe book by its 1-based index.
-
-**Command format:** `delete-r INDEX`
-
-  ---
-
-#### Implementation
-
-The feature involves three classes:
-
-| Class | Role |
-|---|---|
-| `Parser` | Parses raw input, validates that the index is a number, and constructs a `DeleteRecipeCommand` |
-| `DeleteRecipeCommand` | Calls `RecipeBook.removeRecipe()` with the given index |
-| `RecipeBook` | Validates the index range and performs the removal |
-
-**Step-by-step execution:**
-
-1. The user enters `delete-r <index>`.
-2. `Parser.parse()` detects the `delete-r` prefix and extracts the index using the constant
-   `DELETE_R_PREFIX` (= 8, the length of `"delete-r"`).
-3. The extracted string is parsed as an integer. If it is not a valid number, an error is printed
-   and a no-op `Command` is returned.
-4. A `DeleteRecipeCommand` is constructed with the 1-based index.
-5. `SudoCook` routes the command to `cmd.execute(recipes)`.
-6. Inside `execute()`:
-    - `RecipeBook.removeRecipe(index)` is called.
-    - If the index is outside the valid range (1 to size), an `IndexOutOfBoundsException` is
-      thrown, caught, and reported via `Ui.printMessage()`.
-    - If the index is valid, the recipe is removed (converting to 0-based internally with
-      `recipes.remove(index - 1)`) and a success message is printed.
-
-Key snippet from `RecipeBook`:
-
-```text
-  public void removeRecipe(int index) {
-      if (index < 1 || index > recipes.size()) {
-          throw new IndexOutOfBoundsException(
-                  "Index " + index + " is out of range. Valid range: 1 to " + recipes.size()
-          );
-      }
-      recipes.remove(index - 1);
-  }
-```
-
-  ---
-
-#### Design Considerations
-
-**Aspect: Index convention (1-based vs 0-based)**
-
-| Option | Pros | Cons |
-|---|---|---|
-| 1-based user input (current) | Matches the numbered list shown by `list-r` and `view-r` | Requires `index - 1` conversion before `ArrayList.remove()` |
-| 0-based user input | Aligns directly with internal storage | Counter-intuitive; users see 1-based numbering in list output |
-
-*Decision:* 1-based indexing is used to stay consistent with `list-r` and `view-r` output, so the
-index the user sees is the same index they use to delete.
 
 ---
 
@@ -439,41 +257,188 @@ displayed starting from 1.
 *Decision:* Reusing `DeleteIngredientCommand` keeps ingredient-removal behavior centralized even
 though it adds a small amount of indirection.
 
+### `sort-i` - Sort Inventory by Expiry Date
+
+#### Overview
+
+The `sort-i` command sorts the inventory so that ingredients with earlier expiry dates appear
+first. Ingredients without an expiry date are placed at the end of the list.
+
+**Command format:** `sort-i`
+
+  ---
+
+#### Implementation
+
+The feature involves four main classes:
+
+| Class | Role |
+|---|---|
+| `Parser` | Detects the `sort-i` prefix and constructs a `SortInventoryCommand` |
+| `SortInventoryCommand` | Delegates sorting to `Inventory` and prints a confirmation message |
+| `Inventory` | Stores ingredients and performs the in-place sort |
+| `Ui` | Displays the success message |
+
+**Step-by-step execution:**
+
+1. The user enters `sort-i`.
+2. `Parser.parse()` detects the prefix and constructs a `SortInventoryCommand`.
+3. `SudoCook` detects the command type and calls `cmd.execute(inventory)`.
+4. Inside `execute()`:
+    - `Inventory.sortIngredients()` sorts the internal ingredient list by expiry date.
+    - `Ui.printMessage("Sorted!")` is called to confirm completion.
+
+Key snippet from `SortInventoryCommand`:
+
+```text
+  public void execute (Inventory ingredients){
+      ingredients.sortIngredients();
+      Ui.printMessage("Sorted!");
+  }
+```
+
+  ---
+
+#### Sequence Diagram
+
+![Sort Inventory Sequence Diagram](team/SortInventory.png)
+
+*Figure 3: Sequence Diagram for the `sort-i` command*
+
+  ---
+
+#### Design Considerations
+
+**Aspect: Sorting criterion**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Sort by expiry date with `null` values last (current) | Helps users prioritise ingredients that expire sooner | Less useful when many ingredients have no expiry date |
+| Sort alphabetically by name | Easy to scan for a specific ingredient | Does not help with expiry-based planning |
+
+*Decision:* Sorting by expiry date is more useful for kitchen inventory management because it
+surfaces ingredients that should be used sooner.
+
+  ---
+
+**Aspect: Location of sorting logic**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Keep sorting in `Inventory` (current) | Keeps data manipulation close to the stored list; command stays simple | Sort order is defined in the inventory layer |
+| Implement sorting in `SortInventoryCommand` | Makes the command self-contained | Mixes orchestration with collection logic |
+
+*Decision:* The sorting logic is kept in `Inventory` so command classes remain focused on
+triggering behaviour rather than manipulating internal data structures directly.
+
+### `list-i` - List Inventory Ingredients
+
+#### Overview
+
+The `list-i` command displays the ingredients currently stored in the inventory. It supports two
+variants: listing all ingredients, or listing only ingredients whose expiry date is before a given
+cutoff.
+
+**Command formats:**
+- `list-i`
+- `list-i ex/YYYY-MM-DD`
+
+  ---
+
+#### Implementation
+
+The feature involves four main classes:
+
+| Class | Role |
+|---|---|
+| `Parser` | Detects the `list-i` prefix, validates the optional expiry cutoff, and constructs a `ListIngredientCommand` |
+| `ListIngredientCommand` | Retrieves the ingredients to display, optionally filters them, and builds the output |
+| `Inventory` | Provides the stored ingredient list |
+| `Ui` | Displays either the ingredient list or an empty-state message |
+
+**Step-by-step execution:**
+
+1. The user enters either `list-i` or `list-i ex/<date>`.
+2. `Parser.parse()` detects the `list-i` prefix.
+3. If no additional argument is provided, `Parser` constructs `new ListIngredientCommand()`.
+4. If an expiry cutoff is provided, `Parser` validates the `ex/YYYY-MM-DD` format, parses the date,
+   and constructs `new ListIngredientCommand(expiryDate)`.
+5. If the format or date is invalid, an error is printed and a no-op `Command` is returned.
+6. `SudoCook` detects the command type and calls `cmd.execute(inventory)`.
+7. Inside `execute()`:
+    - `Inventory.getIngredients()` is called to retrieve the stored ingredients.
+    - If an expiry cutoff exists, ingredients are filtered to those with a non-null expiry date
+      before the cutoff.
+    - If the resulting list is empty, `Ui.printMessage()` prints an empty-state message.
+    - Otherwise, a numbered list with the appropriate header is built and printed.
+
+Key snippet from `ListIngredientCommand`:
+
+```text
+  ArrayList<Ingredient> ingredients = inventory.getIngredients();
+  if (expiry == null) {
+      return ingredients;
+  }
+
+  ArrayList<Ingredient> filteredIngredients = new ArrayList<>();
+  for (Ingredient ingredient : ingredients) {
+      LocalDate ingredientExpiry = ingredient.getExpiryDate();
+      if (ingredientExpiry != null && ingredientExpiry.isBefore(expiry)) {
+          filteredIngredients.add(ingredient);
+      }
+  }
+```
+
+  ---
+
+#### Sequence Diagram
+
+![List Ingredients Sequence Diagram](team/ListIngredients.png)
+
+*Figure 4: Sequence Diagram for the `list-i` command*
+
+  ---
+
+#### Design Considerations
+
+**Aspect: Supporting filtered and unfiltered listing**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Single command with an optional expiry cutoff (current) | Keeps the interface compact; both variants share the same execution path | Parser logic is slightly more complex |
+| Separate commands for full listing and filtered listing | Simpler parsing per command | Adds another command for users to remember |
+
+*Decision:* A single command with an optional cutoff keeps the user interface smaller while still
+covering both use cases.
+
+  ---
+
+**Aspect: Handling ingredients without expiry dates in filtered mode**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Exclude ingredients with `null` expiry dates (current) | Keeps the filtered result precise; avoids guessing how undated items should compare | Undated ingredients never appear in cutoff-based results |
+| Include ingredients with `null` expiry dates | Ensures no ingredient is hidden | Makes "expiring before" results less accurate |
+
+*Decision:* Ingredients without expiry dates are excluded in cutoff mode because the filter is
+intended to show only items known to expire before the requested date.
+
 
 ## Product scope
 ### Target user profile
 
-A single student living independently (e.g., in a campus dorm) who types fast and prefers keyboard-driven workflows over 
-mouse/touch input. This student enjoys cooking by himself/herself, but often gets frustrated because of being too lazy 
-to organize the stored ingredients and not knowing what to cook.
-
+{Describe the target user profile}
 
 ### Value proposition
 
-SudoCook is a cross-platform, portable, command-line pantry and recipe helper that reduces food waste by letting the 
-user quickly log ingredients and expiry dates, and reduces meal indecision by suggesting recipes based on what’s 
-currently in the pantry and the user’s available cooking time. All data is stored locally in a human-editable plain-text 
-file (e.g., JSON or CSV) and managed through an object-oriented Java 17 codebase packaged as a single runnable JAR, with 
-no DBMS and no reliance on remote servers.
-
+{Describe the value proposition: what problem does it solve?}
 
 ## User Stories
 
-|Version| As a ...     | I want to ... | So that I can ...|
-|--------|--------------|---------------|------------------|
-|v1.0| Busy Student |Add an item and expiry date using a single short command|I can digitize my pantry quickly after grocery shopping|
-|v1.0| Novice Cook  |View step-by-step instructions for a specific recipe|I can follow the process accurately and complete the dish|
-|v1.0| User|Delete items quickly|My inventory list remains accurate after I throw things away/ use them|
-|v1.0| User |View all ingredients|I know what ingredients have been added so far|
-|v1.0| User |Add a recipe|I don't have to rely on my memory for instructions|
-|v1.0| User |Delete a recipe|I can keep my recipe list clean and organized|
-|v2.0| Budget-conscious Student|List all items sorted by their expiry dates|I can prioritize ingredients about to spoil and avoid wasting money|
-|v2.0| Indecisive Student|Request recipe suggestions based on current stock|I don't have to spend mental energy deciding what to cook|
-|v2.0| Power User|Mark a recipe as "cooked" to auto-deduct ingredients|My stock levels remain accurate with minimal manual adjustment|
-|v2.0| Organized Student|Compare a specific dish's requirements against inventory|I can see if I have everything or need a precise shopping list|
-|v2.0| Fast-typer|Use an "undo" command to revert the last change|I can quickly fix accidental deletions or typos|
-|v2.0| Tech-savvy User|Store data in a human-editable JSON/CSV file|My data is permanent, portable, and easy to backup|
-|v2.0| Health-conscious Student|Specify a dietary plan (e.g., Vegan) for automated meal plans|I can maintain nutritional goals without manual calculations|
+|Version| As a ... | I want to ... | So that I can ...|
+|--------|----------|---------------|------------------|
+|v1.0|new user|see usage instructions|refer to them when I forget how to use the application|
+|v2.0|user|find a to-do item by name|locate a to-do without having to go through the entire list|
 
 ## Non-Functional Requirements
 

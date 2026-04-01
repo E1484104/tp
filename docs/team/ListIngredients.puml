@@ -1,0 +1,71 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+hide footbox
+
+skinparam MaxMessageSize 150
+
+actor User
+participant ":SudoCook" as SudoCook
+participant ":Parser" as Parser
+participant "cmd:ListIngredientCommand" as Cmd
+participant "inventory:Inventory" as Inventory
+participant ":Ui" as Ui
+
+User -> SudoCook : enter list-i command
+activate SudoCook
+
+SudoCook -> Parser : parse(input)
+activate Parser
+
+alt no expiry cutoff
+    create Cmd
+    Parser -> Cmd ** : ListIngredientCommand()
+    activate Cmd
+    Cmd --> Parser
+    deactivate Cmd
+else with expiry cutoff
+    create Cmd
+    Parser -> Cmd ** : ListIngredientCommand(expiry)
+    activate Cmd
+    Cmd --> Parser
+    deactivate Cmd
+end
+
+Parser --> SudoCook : cmd
+deactivate Parser
+
+SudoCook -> Cmd : execute(inventory)
+activate Cmd
+
+Cmd -> Inventory : getIngredients()
+activate Inventory
+Inventory --> Cmd : ingredients
+deactivate Inventory
+
+alt expiry cutoff provided
+    Cmd -> Cmd : filter ingredients by expiry
+else no expiry cutoff
+end
+
+alt no ingredients to display
+    Cmd -> Ui : print empty message
+    activate Ui
+    Ui --> Cmd
+    deactivate Ui
+else ingredients found
+    Cmd -> Ui : print ingredient list
+    activate Ui
+    Ui --> Cmd
+    deactivate Ui
+end
+
+SudoCook <-- Cmd
+deactivate Cmd
+destroy Cmd
+
+SudoCook --> User
+deactivate SudoCook
+
+@enduml

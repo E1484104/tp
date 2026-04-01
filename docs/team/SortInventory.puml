@@ -1,0 +1,51 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+hide footbox
+
+skinparam MaxMessageSize 150
+
+actor User
+participant ":SudoCook" as SudoCook
+participant ":Parser" as Parser
+participant "cmd:SortInventoryCommand" as Cmd
+participant "inventory:Inventory" as Inventory
+participant ":Ui" as Ui
+
+User -> SudoCook : enter sort-i command
+activate SudoCook
+
+SudoCook -> Parser : parse(input)
+activate Parser
+
+create Cmd
+Parser -> Cmd ** : SortInventoryCommand
+activate Cmd
+Cmd --> Parser
+deactivate Cmd
+
+Parser --> SudoCook : cmd
+deactivate Parser
+
+SudoCook -> Cmd : execute(inventory)
+activate Cmd
+
+Cmd -> Inventory : sortIngredients()
+activate Inventory
+Inventory --> Cmd
+deactivate Inventory
+
+Cmd -> Ui : printMessage("Sorted!")
+activate Ui
+Ui --> Cmd
+deactivate Ui
+
+SudoCook <-- Cmd
+deactivate Cmd
+destroy Cmd
+
+SudoCook --> User
+deactivate SudoCook
+
+@enduml
