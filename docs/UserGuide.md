@@ -350,10 +350,19 @@ Shows a compact numbered list of all recipe names.
 
 Format: `list-r`
 
+Example:
+
+`list-r`
+
 Expected output:
 ```
 1. Fried Rice
 2. Instant Noodles
+```
+
+Expected output (no recipes saved):
+```
+No recipes found.
 ```
 
 ---
@@ -366,11 +375,110 @@ Format:
 * `view-r` — shows full details for all recipes.
 * `view-r INDEX` — shows full details for the recipe at the given 1-based index.
 
+* `INDEX` must be a positive integer matching the recipe's position in `list-r`.
+* Use `list-r` first if you need to confirm the correct index.
+
 Examples:
 
 `view-r`
 
 `view-r 1`
+
+Expected output (specific recipe):
+```
+Recipe Name: Fried Rice
+Preparation Time: 15 minutes
+Calories: 400 kcal
+
+    Ingredients:
+    - rice (2.0 cups)
+    - egg (2.0 pcs)
+
+    Steps:
+    - Cook the rice.
+    - Scramble the eggs.
+    - Mix everything together.
+```
+
+Expected output (index out of range):
+```
+Oops! Index 5 is out of range. (Valid range: 1 to 2)
+```
+
+Expected output (no recipes saved):
+```
+No recipes found.
+```
+
+---
+
+### Searching recipes: `search-r`
+
+Fuzzy-searches the recipe book by name. Handles partial input, case differences, and minor typos.
+
+Format: `search-r QUERY`
+
+* `QUERY` is case-insensitive.
+* Partial matches and typos are tolerated (e.g. `freid rice` will still match `Fried Rice`).
+
+Examples:
+
+`search-r fried rice`
+
+`search-r freid` *(typo tolerated)*
+
+`search-r SOUP` *(case insensitive)*
+
+Expected output (matches found):
+```
+Found 1 recipe(s) matching "fried rice":
+1. Fried Rice
+```
+
+Expected output (no matches):
+```
+No recipes matched "xyz".
+```
+
+Expected output (empty query):
+```
+Oops! Please provide a search query. Use: search-r QUERY
+```
+
+---
+
+### Searching ingredients: `search-i`
+
+Fuzzy-searches the inventory by ingredient name. Handles partial input, case differences, and minor typos.
+
+Format: `search-i QUERY`
+
+* `QUERY` is case-insensitive.
+* Partial matches and typos are tolerated (e.g. `tomatto` will still match `Tomato`).
+
+Examples:
+
+`search-i tomato`
+
+`search-i tomatto` *(typo tolerated)*
+
+`search-i MILK` *(case insensitive)*
+
+Expected output (matches found):
+```
+Found 1 ingredient(s) matching "tomato":
+1. Tomato (3.0 pcs)
+```
+
+Expected output (no matches):
+```
+No ingredients matched "xyz".
+```
+
+Expected output (empty query):
+```
+Oops! Please provide a search query. Use: search-i QUERY
+```
 
 ---
 
@@ -395,6 +503,8 @@ are fully portable.
 | Add ingredient | `add-i n/NAME q/QUANTITY u/UNIT ex/EXPIRY_DATE` |
 | List ingredients | `list-i` or `list-i ex/YYYY-MM-DD` |
 | Sort ingredients | `sort-i` |
+| Search recipes | `search-r QUERY` |
+| Search ingredients | `search-i QUERY` |
 | Recommend by ingredient | `recommend-r n/INGREDIENT_NAME` |
 | Recommend from inventory | `recommend-r` |
 | Recommend nearly-makeable | `recommend-r missing/N` |
