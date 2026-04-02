@@ -492,6 +492,14 @@ Key snippet from `RecipeBook`:
 
 ---
 
+#### Sequence Diagram
+
+![Filter Recipe Sequence Diagram](team/FilterRecipe.png)
+
+*Figure 9: Sequence Diagram for the `filter-r` command*
+
+---
+
 #### Design Considerations
 
 **Aspect: Optional vs. mandatory filter criteria**
@@ -514,6 +522,88 @@ Key snippet from `RecipeBook`:
 
 *Decision:* AND logic was chosen because users who specify multiple criteria typically want to narrow
 their search, not broaden it.
+
+---
+
+### `delete-r` — Delete a Recipe
+
+#### Overview
+
+The `delete-r` command removes a recipe from the recipe book by its displayed index. The index
+corresponds to the 1-based numbering shown by the `list-r` command.
+
+**Command format:** `delete-r INDEX`
+
+---
+
+#### Implementation
+
+The feature involves three classes:
+
+| Class | Role |
+|---|---|
+| `Parser` | Detects the `delete-r` prefix, parses the index, and constructs a `DeleteRecipeCommand` |
+| `DeleteRecipeCommand` | Calls `RecipeBook.removeRecipe()` and handles success/error output |
+| `RecipeBook` | Validates the index and removes the recipe from the internal list |
+
+**Step-by-step execution:**
+
+1. The user enters `delete-r <index>`.
+2. `Parser.parse()` detects the `delete-r` prefix and extracts the index. If the index is not a
+   valid number, an error is printed and a no-op `Command` is returned.
+3. A `DeleteRecipeCommand` is constructed with the parsed index.
+4. `SudoCook` routes the command to `cmd.execute(recipes)` via the default recipe routing branch.
+5. Inside `execute()`:
+    - `RecipeBook.removeRecipe(index)` is called.
+    - If the recipe book is empty or the index is out of range, an `IndexOutOfBoundsException` is
+      thrown and caught, and an error message is printed via `Ui.printMessage()`.
+    - If the index is valid, the recipe is removed from the internal list and a success message is
+      printed.
+
+Key snippet from `DeleteRecipeCommand`:
+
+```text
+  try {
+      recipes.removeRecipe(index);
+      Ui.printMessage("Recipe " + index + " deleted successfully.");
+  } catch (IndexOutOfBoundsException e) {
+      Ui.printMessage("Invalid index: " + e.getMessage());
+  }
+```
+
+---
+
+#### Sequence Diagram
+
+![Delete Recipe Sequence Diagram](team/DeleteRecipe.png)
+
+*Figure 10: Sequence Diagram for the `delete-r` command*
+
+---
+
+#### Design Considerations
+
+**Aspect: Index-based vs. name-based deletion**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Index-based deletion (current) | Unambiguous; works even when multiple recipes have similar names | User must first run `list-r` to find the index |
+| Name-based deletion | More intuitive for users who remember the recipe name | Ambiguous if multiple recipes share a name; requires exact match or fuzzy logic |
+
+*Decision:* Index-based deletion was chosen for its simplicity and unambiguity, consistent with
+how recipes are displayed in numbered lists.
+
+---
+
+**Aspect: Error handling strategy**
+
+| Option | Pros | Cons |
+|---|---|---|
+| Catch `IndexOutOfBoundsException` (current) | Centralises bounds checking in `RecipeBook`; command stays simple | Uses exceptions for control flow |
+| Pre-validate index in the command before calling `removeRecipe()` | Avoids exception-based control flow | Duplicates bounds-checking logic across command and data class |
+
+*Decision:* Exception-based handling was chosen to keep index validation in `RecipeBook`, the
+class that owns the recipe list and knows its valid range.
 
 ---
 

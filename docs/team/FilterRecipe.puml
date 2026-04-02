@@ -1,0 +1,65 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+hide footbox
+
+skinparam MaxMessageSize 150
+
+actor User
+participant ":SudoCook" as SudoCook
+participant ":Parser" as Parser
+participant "cmd:FilterRecipeCommand" as Cmd
+participant "recipes:RecipeBook" as RecipeBook
+participant ":Ui" as Ui
+
+User -> SudoCook : enter filter-r command
+activate SudoCook
+
+SudoCook -> Parser : parse("filter-r t/20 c/500")
+activate Parser
+
+note right of Parser : Extract t/ and c/ values\nusing regex patterns
+
+create Cmd
+Parser -> Cmd ** : FilterRecipeCommand(maxTime, maxCalories)
+activate Cmd
+Cmd --> Parser
+deactivate Cmd
+
+Parser --> SudoCook : cmd
+deactivate Parser
+
+SudoCook -> Cmd : execute(recipes)
+activate Cmd
+
+Cmd -> RecipeBook : filterRecipes(maxTime, maxCalories)
+activate RecipeBook
+
+loop for each recipe in recipes
+    note right of RecipeBook : Check time <= maxTime (if set)\nAND calories <= maxCalories (if set)
+end
+
+alt matching recipes found
+    RecipeBook -> Ui : printGradientMessage(filteredList)
+    activate Ui
+    Ui --> RecipeBook
+    deactivate Ui
+else no recipes match
+    RecipeBook -> Ui : printMessage("No recipes found matching the criteria.")
+    activate Ui
+    Ui --> RecipeBook
+    deactivate Ui
+end
+
+RecipeBook --> Cmd
+deactivate RecipeBook
+
+SudoCook <-- Cmd
+deactivate Cmd
+destroy Cmd
+
+SudoCook --> User
+deactivate SudoCook
+
+@enduml

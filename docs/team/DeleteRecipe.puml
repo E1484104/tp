@@ -1,0 +1,64 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+hide footbox
+
+skinparam MaxMessageSize 150
+
+actor User
+participant ":SudoCook" as SudoCook
+participant ":Parser" as Parser
+participant "cmd:DeleteRecipeCommand" as Cmd
+participant "recipes:RecipeBook" as RecipeBook
+participant ":Ui" as Ui
+
+User -> SudoCook : enter delete-r command
+activate SudoCook
+
+SudoCook -> Parser : parse("delete-r 1")
+activate Parser
+
+note right of Parser : Parse index from input
+
+create Cmd
+Parser -> Cmd ** : DeleteRecipeCommand(index)
+activate Cmd
+Cmd --> Parser
+deactivate Cmd
+
+Parser --> SudoCook : cmd
+deactivate Parser
+
+SudoCook -> Cmd : execute(recipes)
+activate Cmd
+
+Cmd -> RecipeBook : removeRecipe(index)
+activate RecipeBook
+
+alt valid index
+    RecipeBook --> Cmd : success
+    deactivate RecipeBook
+
+    Cmd -> Ui : printMessage("Recipe deleted successfully.")
+    activate Ui
+    Ui --> Cmd
+    deactivate Ui
+else invalid index (IndexOutOfBoundsException)
+    RecipeBook --> Cmd : throw IndexOutOfBoundsException
+    deactivate RecipeBook
+
+    Cmd -> Ui : printMessage("Invalid index: ...")
+    activate Ui
+    Ui --> Cmd
+    deactivate Ui
+end
+
+SudoCook <-- Cmd
+deactivate Cmd
+destroy Cmd
+
+SudoCook --> User
+deactivate SudoCook
+
+@enduml
